@@ -1,0 +1,14 @@
+{
+  "name": "ai-ideas-priority-interface",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel",
+    "deploy:prod": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.4.0"
+  }
+}
