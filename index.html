@@ -1159,12 +1159,21 @@
       renderRows();
     }
 
+    function normalizedSupabaseUrl() {
+      const rawUrl = String(SUPABASE_CONFIG.url || "").trim().replace(/\/$/, "");
+      if (!rawUrl || rawUrl.includes("YOUR_")) return "";
+      if (/^https?:\/\//i.test(rawUrl)) return rawUrl;
+      if (/^[a-z0-9-]+$/i.test(rawUrl)) return `https://${rawUrl}.supabase.co`;
+      return rawUrl;
+    }
+
     function hasSupabaseConfig() {
+      const supabaseUrl = normalizedSupabaseUrl();
+      const anonKey = String(SUPABASE_CONFIG.anonKey || "").trim();
       return Boolean(
-        SUPABASE_CONFIG.url &&
-        SUPABASE_CONFIG.anonKey &&
-        !SUPABASE_CONFIG.url.includes("YOUR_") &&
-        !SUPABASE_CONFIG.anonKey.includes("YOUR_")
+        supabaseUrl &&
+        anonKey &&
+        !anonKey.includes("YOUR_")
       );
     }
 
@@ -1177,8 +1186,7 @@
     }
 
     function supabaseRestUrl(params = "") {
-      const baseUrl = SUPABASE_CONFIG.url.replace(/\/$/, "");
-      return `${baseUrl}/rest/v1/${SHARED_TABLE}${params}`;
+      return `${normalizedSupabaseUrl()}/rest/v1/${SHARED_TABLE}${params}`;
     }
 
     async function responseJson(response) {
