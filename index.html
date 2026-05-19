@@ -137,7 +137,7 @@
 
     table {
       width: 100%;
-      min-width: 1040px;
+      min-width: 1280px;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -158,6 +158,10 @@
     col.effort-col,
     col.started-col {
       width: 140px;
+    }
+
+    col.comments-col {
+      width: 280px;
     }
 
     col.actions-col {
@@ -291,14 +295,32 @@
       overflow-wrap: anywhere;
     }
 
+    .comment-input {
+      display: block;
+      width: 100%;
+      min-height: 38px;
+      max-height: 130px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      color: #34413d;
+      line-height: 1.35;
+      resize: vertical;
+      padding: 7px 9px;
+      overflow-wrap: anywhere;
+    }
+
     .idea-input:hover,
-    .idea-input:focus-visible {
+    .idea-input:focus-visible,
+    .comment-input:hover,
+    .comment-input:focus-visible {
       border-color: var(--line);
       background: #fbfcfa;
       outline: none;
     }
 
-    .archived-row .idea-input {
+    .archived-row .idea-input,
+    .archived-row .comment-input {
       color: #6b7672;
       text-decoration: line-through;
     }
@@ -547,7 +569,7 @@
       }
 
       table {
-        min-width: 920px;
+        min-width: 1120px;
       }
 
       th,
@@ -563,6 +585,10 @@
       col.effort-col,
       col.started-col {
         width: 116px;
+      }
+
+      col.comments-col {
+        width: 220px;
       }
 
       col.actions-col {
@@ -620,6 +646,7 @@
           <col class="impact-col">
           <col class="effort-col">
           <col class="started-col">
+          <col class="comments-col">
           <col class="actions-col">
         </colgroup>
         <thead>
@@ -630,6 +657,7 @@
             <th scope="col">Impact</th>
             <th scope="col">Effort</th>
             <th scope="col">Started</th>
+            <th scope="col">Comments</th>
             <th scope="col">Actions</th>
           </tr>
         </thead>
@@ -652,6 +680,11 @@
         <div class="field-stack">
           <label for="newIdeaText">IDEA + Description</label>
           <textarea class="dialog-textarea" id="newIdeaText" required></textarea>
+        </div>
+
+        <div class="field-stack">
+          <label for="newIdeaComments">Comments</label>
+          <textarea class="dialog-textarea" id="newIdeaComments"></textarea>
         </div>
 
         <div class="dialog-grid">
@@ -724,6 +757,7 @@
     const addIdeaDialog = document.querySelector("#addIdeaDialog");
     const addIdeaForm = document.querySelector("#addIdeaForm");
     const newIdeaText = document.querySelector("#newIdeaText");
+    const newIdeaComments = document.querySelector("#newIdeaComments");
     const toggleArchivedButton = document.querySelector("#toggleArchived");
     const archiveToggleLabel = document.querySelector("#archiveToggleLabel");
     let dragRow = null;
@@ -775,6 +809,7 @@
         normalized.push({
           id,
           idea,
+          comments: String(row?.comments ?? fallback.comments ?? ""),
           impact: isAllowedValue("impact", row?.impact ?? fallback.impact ?? ""),
           effort: isAllowedValue("effort", row?.effort ?? fallback.effort ?? ""),
           started: isAllowedValue("started", row?.started ?? fallback.started ?? ""),
@@ -788,7 +823,7 @@
         defaultRows.forEach((row) => {
           if (!seen.has(row.id)) {
             seen.add(row.id);
-            normalized.push({ ...row, archived: false, createdAt: null, updatedAt: null });
+            normalized.push({ ...row, comments: "", archived: false, createdAt: null, updatedAt: null });
           }
         });
       }
@@ -879,16 +914,33 @@
       return td;
     }
 
+    function commentsCell(item) {
+      const td = document.createElement("td");
+      const textarea = document.createElement("textarea");
+      textarea.className = "comment-input";
+      textarea.dataset.id = item.id;
+      textarea.value = item.comments || "";
+      textarea.rows = 1;
+      textarea.setAttribute("aria-label", `Comments for ${item.idea}`);
+      td.append(textarea);
+      requestAnimationFrame(() => autoResizeTextarea(textarea));
+      return td;
+    }
+
     function updateRowLabels(row, idea) {
       if (!row) return;
       const dragHandle = row.querySelector(".drag-handle");
       const actionButton = row.querySelector("[data-action]");
+      const comments = row.querySelector(".comment-input");
       if (dragHandle) {
         dragHandle.setAttribute("aria-label", `Move ${idea}`);
       }
       if (actionButton) {
         const action = actionButton.dataset.action === "restore" ? "Restore" : "Archive";
         actionButton.setAttribute("aria-label", `${action} ${idea}`);
+      }
+      if (comments) {
+        comments.setAttribute("aria-label", `Comments for ${idea}`);
       }
     }
 
@@ -899,7 +951,7 @@
       if (!displayRows.length) {
         const row = document.createElement("tr");
         const cell = document.createElement("td");
-        cell.colSpan = 7;
+        cell.colSpan = 8;
         cell.className = "empty-state";
         cell.textContent = showArchived ? "No ideas to show." : "No active ideas. Add one or show archived rows.";
         row.append(cell);
@@ -936,6 +988,7 @@
           editableSelectCell(item, "impact"),
           editableSelectCell(item, "effort"),
           editableSelectCell(item, "started"),
+          commentsCell(item),
           actionCell(item)
         );
         tbody.append(row);
@@ -1085,21 +1138,35 @@
     });
 
     tbody.addEventListener("input", (event) => {
-      if (!event.target.matches(".idea-input")) return;
+      if (!event.target.matches(".idea-input, .comment-input")) return;
       autoResizeTextarea(event.target);
-      updateRow(event.target.dataset.id, { idea: event.target.value });
-      updateRowLabels(event.target.closest("tr"), event.target.value);
-      queueRemoteSave(900);
+      if (event.target.matches(".idea-input")) {
+        updateRow(event.target.dataset.id, { idea: event.target.value });
+        updateRowLabels(event.target.closest("tr"), event.target.value);
+        queueRemoteSave(900);
+      }
+      if (event.target.matches(".comment-input")) {
+        updateRow(event.target.dataset.id, { comments: event.target.value });
+        queueRemoteSave(900);
+      }
     });
 
     tbody.addEventListener("blur", (event) => {
-      if (!event.target.matches(".idea-input")) return;
-      const value = event.target.value.trim() || "Untitled idea";
-      event.target.value = value;
-      updateRow(event.target.dataset.id, { idea: value });
-      updateRowLabels(event.target.closest("tr"), value);
-      autoResizeTextarea(event.target);
-      queueRemoteSave();
+      if (event.target.matches(".idea-input")) {
+        const value = event.target.value.trim() || "Untitled idea";
+        event.target.value = value;
+        updateRow(event.target.dataset.id, { idea: value });
+        updateRowLabels(event.target.closest("tr"), value);
+        autoResizeTextarea(event.target);
+        queueRemoteSave();
+      }
+      if (event.target.matches(".comment-input")) {
+        const value = event.target.value.trim();
+        event.target.value = value;
+        updateRow(event.target.dataset.id, { comments: value });
+        autoResizeTextarea(event.target);
+        queueRemoteSave();
+      }
     }, true);
 
     tbody.addEventListener("click", (event) => {
@@ -1132,10 +1199,10 @@
     }
 
     function makeCsv() {
-      const headers = ["Priority", "IDEA + Description", "Impact", "Effort", "Started", "Archived"];
+      const headers = ["Priority", "IDEA + Description", "Comments", "Impact", "Effort", "Started", "Archived"];
       const lines = [headers.map(csvEscape).join(",")];
       rowsForSave().forEach((row) => {
-        lines.push([row.priority || "", row.idea, row.impact, row.effort, row.started, row.archived ? "Yes" : "No"].map(csvEscape).join(","));
+        lines.push([row.priority || "", row.idea, row.comments, row.impact, row.effort, row.started, row.archived ? "Yes" : "No"].map(csvEscape).join(","));
       });
       return lines.join("\n");
     }
@@ -1244,7 +1311,7 @@
     }
 
     function isUserEditing() {
-      return Boolean(document.activeElement?.matches(".idea-input, .value-select, .dialog-textarea, .dialog-select"));
+      return Boolean(document.activeElement?.matches(".idea-input, .comment-input, .value-select, .dialog-textarea, .dialog-select"));
     }
 
     function queueRemoteSave(delay = 350) {
@@ -1330,6 +1397,7 @@
       const newRow = {
         id: createId(Date.now()),
         idea,
+        comments: newIdeaComments.value.trim(),
         impact: document.querySelector("#newIdeaImpact").value,
         effort: document.querySelector("#newIdeaEffort").value,
         started: document.querySelector("#newIdeaStarted").value,
