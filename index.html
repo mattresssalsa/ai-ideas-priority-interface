@@ -40,6 +40,7 @@
 
     button,
     input,
+    textarea,
     select {
       font: inherit;
     }
@@ -136,7 +137,7 @@
 
     table {
       width: 100%;
-      min-width: 900px;
+      min-width: 1040px;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -157,6 +158,10 @@
     col.effort-col,
     col.started-col {
       width: 140px;
+    }
+
+    col.actions-col {
+      width: 126px;
     }
 
     thead th {
@@ -206,6 +211,11 @@
 
     tbody tr.drop-target {
       box-shadow: inset 0 2px 0 var(--accent);
+    }
+
+    tbody tr.archived-row {
+      background: #f8faf9;
+      color: #6b7672;
     }
 
     .drag-cell {
@@ -263,6 +273,34 @@
       font-weight: 650;
       line-height: 1.35;
       overflow-wrap: anywhere;
+    }
+
+    .idea-input {
+      display: block;
+      width: 100%;
+      min-height: 38px;
+      max-height: 130px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--ink);
+      font-weight: 650;
+      line-height: 1.35;
+      resize: vertical;
+      padding: 7px 9px;
+      overflow-wrap: anywhere;
+    }
+
+    .idea-input:hover,
+    .idea-input:focus-visible {
+      border-color: var(--line);
+      background: #fbfcfa;
+      outline: none;
+    }
+
+    .archived-row .idea-input {
+      color: #6b7672;
+      text-decoration: line-through;
     }
 
     .select-shell {
@@ -338,6 +376,135 @@
       color: #4b5563;
     }
 
+    .row-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: #5f6c67;
+      cursor: pointer;
+    }
+
+    .icon-button:hover,
+    .icon-button:focus-visible {
+      border-color: var(--line-strong);
+      background: var(--surface-soft);
+      outline: none;
+    }
+
+    .icon-button.archive:hover,
+    .icon-button.archive:focus-visible {
+      color: var(--rose);
+    }
+
+    .icon-button.restore:hover,
+    .icon-button.restore:focus-visible {
+      color: var(--accent);
+    }
+
+    .archived-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      min-height: 28px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      color: #4b5563;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .empty-state {
+      padding: 28px 16px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    dialog {
+      width: min(560px, calc(100vw - 28px));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      padding: 0;
+    }
+
+    dialog::backdrop {
+      background: rgba(24, 33, 31, 0.32);
+    }
+
+    .dialog-form {
+      padding: 20px;
+    }
+
+    .dialog-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .dialog-title {
+      margin: 0;
+      font-size: 1.2rem;
+      line-height: 1.2;
+    }
+
+    .field-stack {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .field-stack label {
+      color: #34413d;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .dialog-textarea,
+    .dialog-select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      color: var(--ink);
+      padding: 10px 11px;
+    }
+
+    .dialog-textarea {
+      min-height: 92px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .dialog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
     .toast {
       position: fixed;
       right: 18px;
@@ -380,7 +547,7 @@
       }
 
       table {
-        min-width: 760px;
+        min-width: 920px;
       }
 
       th,
@@ -397,6 +564,14 @@
       col.started-col {
         width: 116px;
       }
+
+      col.actions-col {
+        width: 96px;
+      }
+
+      .dialog-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -408,21 +583,22 @@
         <p class="source-note">Rows extracted from AI Ideas.pdf</p>
       </div>
       <div class="controls" aria-label="Table controls">
-        <button class="control-button" id="resetOrder" type="button">
+        <button class="control-button primary" id="addIdea" type="button">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 3-6.7"></path>
-            <path d="M3 3v6h6"></path>
+            <path d="M12 5v14"></path>
+            <path d="M5 12h14"></path>
           </svg>
-          Reset
+          Add Idea
         </button>
-        <button class="control-button" id="copyCsv" type="button">
+        <button class="control-button" id="toggleArchived" type="button" aria-pressed="false">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            <path d="M21 8v13H3V8"></path>
+            <path d="M1 3h22v5H1z"></path>
+            <path d="M10 12h4"></path>
           </svg>
-          Copy CSV
+          <span id="archiveToggleLabel">Show Archived</span>
         </button>
-        <button class="control-button primary" id="downloadCsv" type="button">
+        <button class="control-button" id="downloadCsv" type="button">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <path d="M7 10l5 5 5-5"></path>
@@ -444,6 +620,7 @@
           <col class="impact-col">
           <col class="effort-col">
           <col class="started-col">
+          <col class="actions-col">
         </colgroup>
         <thead>
           <tr>
@@ -453,11 +630,51 @@
             <th scope="col">Impact</th>
             <th scope="col">Effort</th>
             <th scope="col">Started</th>
+            <th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody id="ideasBody"></tbody>
       </table>
     </section>
+
+    <dialog id="addIdeaDialog">
+      <form class="dialog-form" id="addIdeaForm" method="dialog">
+        <div class="dialog-head">
+          <h2 class="dialog-title">Add Idea</h2>
+          <button class="icon-button" id="closeAddIdea" type="button" aria-label="Close">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="field-stack">
+          <label for="newIdeaText">IDEA + Description</label>
+          <textarea class="dialog-textarea" id="newIdeaText" required></textarea>
+        </div>
+
+        <div class="dialog-grid">
+          <div class="field-stack">
+            <label for="newIdeaImpact">Impact</label>
+            <select class="dialog-select" id="newIdeaImpact"></select>
+          </div>
+          <div class="field-stack">
+            <label for="newIdeaEffort">Effort</label>
+            <select class="dialog-select" id="newIdeaEffort"></select>
+          </div>
+          <div class="field-stack">
+            <label for="newIdeaStarted">Started</label>
+            <select class="dialog-select" id="newIdeaStarted"></select>
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="control-button" id="cancelAddIdea" type="button">Cancel</button>
+          <button class="control-button primary" type="submit">Add Idea</button>
+        </div>
+      </form>
+    </dialog>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -467,15 +684,15 @@
     const SUPABASE_CONFIG = window.AI_IDEAS_SUPABASE || {};
     const SHARED_TABLE = "ai_ideas_state";
     const SHARED_RECORD_ID = "shared";
-    const STORAGE_KEY = "aiIdeasPriorityOrder:v1";
-    const EDITS_KEY = "aiIdeasCellEdits:v1";
+    const STATE_CACHE_KEY = "aiIdeasRows:v3";
+    const SHOW_ARCHIVED_KEY = "aiIdeasShowArchived:v1";
     const SYNC_INTERVAL_MS = 15000;
     const fieldOptions = {
       impact: ["", "Testing", "Low", "Medium", "High"],
       effort: ["", "Very low", "Low", "Medium", "High"],
       started: ["", "Yes", "No"]
     };
-    const ideas = [
+    const defaultRows = [
       { id: "geo-scorecard", idea: "Zoe’s GEO Scorecard Generator", impact: "Testing", effort: "Very low", started: "Yes" },
       { id: "timeline-release", idea: "Timeline / Release Optimizer", impact: "High", effort: "High", started: "" },
       { id: "weekly-playlist", idea: "Weekly Playlist Tracker for new releases", impact: "High", effort: "Medium", started: "Yes" },
@@ -499,10 +716,16 @@
       { id: "sync-support", idea: "Sync support agent", impact: "", effort: "Medium", started: "" },
       { id: "international-pulsemap", idea: "International PulseMap", impact: "", effort: "Medium", started: "" }
     ];
+    const defaultById = new Map(defaultRows.map((row) => [row.id, row]));
 
     const tbody = document.querySelector("#ideasBody");
     const status = document.querySelector("#status");
     const toast = document.querySelector("#toast");
+    const addIdeaDialog = document.querySelector("#addIdeaDialog");
+    const addIdeaForm = document.querySelector("#addIdeaForm");
+    const newIdeaText = document.querySelector("#newIdeaText");
+    const toggleArchivedButton = document.querySelector("#toggleArchived");
+    const archiveToggleLabel = document.querySelector("#archiveToggleLabel");
     let dragRow = null;
     let activePointerId = null;
     let toastTimer = null;
@@ -510,58 +733,87 @@
     let syncLabel = "Checking shared database...";
     let lastRemoteUpdatedAt = null;
     let isSavingRemote = false;
-    let edits = loadEdits();
-
-    function loadOrder() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        const validSaved = saved.filter((id) => ideas.some((idea) => idea.id === id));
-        const missing = ideas.map((idea) => idea.id).filter((id) => !validSaved.includes(id));
-        return [...validSaved, ...missing];
-      } catch {
-        return ideas.map((idea) => idea.id);
-      }
-    }
-
-    function getOrderedIdeas() {
-      const byId = new Map(ideas.map((idea) => [idea.id, idea]));
-      return loadOrder().map((id) => byId.get(id)).filter(Boolean);
-    }
+    let showArchived = localStorage.getItem(SHOW_ARCHIVED_KEY) === "true";
+    let rows = loadCachedRows();
 
     function updateStatus() {
-      const count = tbody.querySelectorAll("tr").length || ideas.length;
-      status.textContent = `${count} ideas ordered by priority${syncLabel ? ` • ${syncLabel}` : ""}`;
+      const activeCount = rows.filter((row) => !row.archived).length;
+      const archivedCount = rows.length - activeCount;
+      const archiveText = archivedCount ? `, ${archivedCount} archived` : "";
+      status.textContent = `${activeCount} active ideas${archiveText}${syncLabel ? ` • ${syncLabel}` : ""}`;
     }
 
-    function loadEdits() {
+    function loadCachedRows() {
       try {
-        const saved = JSON.parse(localStorage.getItem(EDITS_KEY) || "{}");
-        return saved && typeof saved === "object" ? saved : {};
+        const saved = JSON.parse(localStorage.getItem(STATE_CACHE_KEY) || "[]");
+        return normalizeRows(saved);
       } catch {
-        return {};
+        return normalizeRows(defaultRows);
       }
     }
 
-    function saveEdits() {
-      localStorage.setItem(EDITS_KEY, JSON.stringify(edits));
+    function saveCachedRows() {
+      localStorage.setItem(STATE_CACHE_KEY, JSON.stringify(rowsForSave()));
     }
 
-    function getCellValue(item, field) {
-      return edits[item.id]?.[field] ?? item[field] ?? "";
+    function isAllowedValue(field, value) {
+      return fieldOptions[field].includes(value) ? value : "";
     }
 
-    function setCellValue(id, field, value) {
-      if (!edits[id]) edits[id] = {};
-      edits[id][field] = value;
-      saveEdits();
+    function normalizeRows(sourceRows = defaultRows, { includeMissingDefaults = true } = {}) {
+      const source = Array.isArray(sourceRows) && sourceRows.length ? sourceRows : defaultRows;
+      const seen = new Set();
+      const normalized = [];
+
+      source.forEach((row, index) => {
+        const fallback = defaultById.get(row?.id) || {};
+        const id = typeof row?.id === "string" && row.id.trim() ? row.id.trim() : createId(index);
+        if (seen.has(id)) return;
+        seen.add(id);
+
+        const idea = String(row?.idea ?? fallback.idea ?? "Untitled idea").trim() || "Untitled idea";
+        normalized.push({
+          id,
+          idea,
+          impact: isAllowedValue("impact", row?.impact ?? fallback.impact ?? ""),
+          effort: isAllowedValue("effort", row?.effort ?? fallback.effort ?? ""),
+          started: isAllowedValue("started", row?.started ?? fallback.started ?? ""),
+          archived: row?.archived === true,
+          createdAt: row?.createdAt || null,
+          updatedAt: row?.updatedAt || null
+        });
+      });
+
+      if (includeMissingDefaults) {
+        defaultRows.forEach((row) => {
+          if (!seen.has(row.id)) {
+            seen.add(row.id);
+            normalized.push({ ...row, archived: false, createdAt: null, updatedAt: null });
+          }
+        });
+      }
+
+      return normalized;
     }
 
-    function saveCurrentOrder() {
-      const ids = [...tbody.querySelectorAll("tr")].map((row) => row.dataset.id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-      updatePriorities();
-      updateStatus();
-      queueRemoteSave();
+    function rowsForSave() {
+      let activePriority = 1;
+      return rows.map((row) => ({
+        ...row,
+        priority: row.archived ? null : activePriority++
+      }));
+    }
+
+    function visibleRows() {
+      return showArchived ? rows : rows.filter((row) => !row.archived);
+    }
+
+    function rowById(id) {
+      return rows.find((row) => row.id === id);
+    }
+
+    function createId(seed = Date.now()) {
+      return `idea-${Number(seed).toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     }
 
     function slug(value) {
@@ -588,18 +840,79 @@
         select.append(option);
       });
 
-      select.value = getCellValue(item, field);
+      select.value = item[field] || "";
       applySelectTone(select);
       shell.append(select);
       td.append(shell);
       return td;
     }
 
+    function actionCell(item) {
+      const td = document.createElement("td");
+      const actions = document.createElement("div");
+      actions.className = "row-actions";
+      const archiveButton = document.createElement("button");
+      archiveButton.type = "button";
+      archiveButton.className = `icon-button ${item.archived ? "restore" : "archive"}`;
+      archiveButton.dataset.id = item.id;
+      archiveButton.dataset.action = item.archived ? "restore" : "archive";
+      archiveButton.setAttribute("aria-label", `${item.archived ? "Restore" : "Archive"} ${item.idea}`);
+      archiveButton.title = item.archived ? "Restore" : "Archive";
+      archiveButton.innerHTML = item.archived
+        ? `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 3v6h6"></path></svg>`
+        : `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="m9 14 3 3 3-3"></path><path d="M12 11v6"></path></svg>`;
+      actions.append(archiveButton);
+      td.append(actions);
+      return td;
+    }
+
+    function ideaCell(item) {
+      const td = document.createElement("td");
+      const textarea = document.createElement("textarea");
+      textarea.className = "idea-input";
+      textarea.dataset.id = item.id;
+      textarea.value = item.idea;
+      textarea.rows = 1;
+      textarea.setAttribute("aria-label", `Edit idea ${item.idea}`);
+      td.append(textarea);
+      requestAnimationFrame(() => autoResizeTextarea(textarea));
+      return td;
+    }
+
+    function updateRowLabels(row, idea) {
+      if (!row) return;
+      const dragHandle = row.querySelector(".drag-handle");
+      const actionButton = row.querySelector("[data-action]");
+      if (dragHandle) {
+        dragHandle.setAttribute("aria-label", `Move ${idea}`);
+      }
+      if (actionButton) {
+        const action = actionButton.dataset.action === "restore" ? "Restore" : "Archive";
+        actionButton.setAttribute("aria-label", `${action} ${idea}`);
+      }
+    }
+
     function renderRows() {
       tbody.replaceChildren();
-      getOrderedIdeas().forEach((item) => {
+      const displayRows = visibleRows();
+
+      if (!displayRows.length) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 7;
+        cell.className = "empty-state";
+        cell.textContent = showArchived ? "No ideas to show." : "No active ideas. Add one or show archived rows.";
+        row.append(cell);
+        tbody.append(row);
+        updateStatus();
+        updateArchiveToggle();
+        return;
+      }
+
+      displayRows.forEach((item) => {
         const row = document.createElement("tr");
         row.dataset.id = item.id;
+        row.classList.toggle("archived-row", item.archived);
 
         const dragCell = document.createElement("td");
         dragCell.className = "drag-cell center";
@@ -616,29 +929,35 @@
         priority.className = "priority";
         priorityCell.append(priority);
 
-        const ideaCell = document.createElement("td");
-        const ideaText = document.createElement("div");
-        ideaText.className = "idea";
-        ideaText.textContent = item.idea;
-        ideaCell.append(ideaText);
-
         row.append(
           dragCell,
           priorityCell,
-          ideaCell,
+          ideaCell(item),
           editableSelectCell(item, "impact"),
           editableSelectCell(item, "effort"),
-          editableSelectCell(item, "started")
+          editableSelectCell(item, "started"),
+          actionCell(item)
         );
         tbody.append(row);
       });
       updatePriorities();
+      updateArchiveToggle();
       updateStatus();
     }
 
     function updatePriorities() {
-      [...tbody.querySelectorAll("tr")].forEach((row, index) => {
-        row.querySelector(".priority").textContent = index + 1;
+      let activePriority = 1;
+      [...tbody.querySelectorAll("tr[data-id]")].forEach((row) => {
+        const item = rowById(row.dataset.id);
+        const priority = row.querySelector(".priority");
+        if (!priority || !item) return;
+        if (item.archived) {
+          priority.className = "archived-label";
+          priority.textContent = "Archived";
+        } else {
+          priority.className = "priority";
+          priority.textContent = activePriority++;
+        }
       });
     }
 
@@ -673,8 +992,27 @@
       tbody.querySelectorAll(".drop-target").forEach((row) => row.classList.remove("drop-target"));
       dragRow = null;
       activePointerId = null;
-      saveCurrentOrder();
+      syncRowsFromDomOrder();
       showToast("Priority order saved");
+    }
+
+    function syncRowsFromDomOrder() {
+      const visibleIds = [...tbody.querySelectorAll("tr[data-id]")].map((row) => row.dataset.id);
+      if (!visibleIds.length) return;
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const orderedVisible = visibleIds.map((id) => byId.get(id)).filter(Boolean);
+
+      if (showArchived) {
+        rows = orderedVisible;
+      } else {
+        const hiddenArchived = rows.filter((row) => row.archived && !visibleIds.includes(row.id));
+        rows = [...orderedVisible, ...hiddenArchived];
+      }
+
+      saveCachedRows();
+      updatePriorities();
+      updateStatus();
+      queueRemoteSave();
     }
 
     tbody.addEventListener("pointerdown", (event) => {
@@ -728,36 +1066,65 @@
       if (event.key === "ArrowUp" && row.previousElementSibling) {
         event.preventDefault();
         tbody.insertBefore(row, row.previousElementSibling);
-        saveCurrentOrder();
+        syncRowsFromDomOrder();
       }
       if (event.key === "ArrowDown" && row.nextElementSibling) {
         event.preventDefault();
         tbody.insertBefore(row.nextElementSibling, row);
-        saveCurrentOrder();
+        syncRowsFromDomOrder();
       }
     });
 
     tbody.addEventListener("change", (event) => {
       if (!event.target.matches(".value-select")) return;
       const { id, field } = event.target.dataset;
-      setCellValue(id, field, event.target.value);
+      updateRow(id, { [field]: event.target.value });
       applySelectTone(event.target);
       showToast("Selection saved");
       queueRemoteSave();
     });
 
-    function currentRows() {
-      const byId = new Map(ideas.map((idea) => [idea.id, idea]));
-      return [...tbody.querySelectorAll("tr")].map((row, index) => {
-        const item = byId.get(row.dataset.id);
-        return {
-          priority: index + 1,
-          ...item,
-          impact: getCellValue(item, "impact"),
-          effort: getCellValue(item, "effort"),
-          started: getCellValue(item, "started")
-        };
-      });
+    tbody.addEventListener("input", (event) => {
+      if (!event.target.matches(".idea-input")) return;
+      autoResizeTextarea(event.target);
+      updateRow(event.target.dataset.id, { idea: event.target.value });
+      updateRowLabels(event.target.closest("tr"), event.target.value);
+      queueRemoteSave(900);
+    });
+
+    tbody.addEventListener("blur", (event) => {
+      if (!event.target.matches(".idea-input")) return;
+      const value = event.target.value.trim() || "Untitled idea";
+      event.target.value = value;
+      updateRow(event.target.dataset.id, { idea: value });
+      updateRowLabels(event.target.closest("tr"), value);
+      autoResizeTextarea(event.target);
+      queueRemoteSave();
+    }, true);
+
+    tbody.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+      const shouldArchive = button.dataset.action === "archive";
+      updateRow(button.dataset.id, { archived: shouldArchive });
+      renderRows();
+      queueRemoteSave();
+      showToast(shouldArchive ? "Idea archived" : "Idea restored");
+    });
+
+    function updateRow(id, changes) {
+      rows = rows.map((row) => (
+        row.id === id
+          ? { ...row, ...changes, updatedAt: new Date().toISOString() }
+          : row
+      ));
+      saveCachedRows();
+      updateStatus();
+    }
+
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 130)}px`;
     }
 
     function csvEscape(value) {
@@ -765,22 +1132,12 @@
     }
 
     function makeCsv() {
-      const headers = ["Priority", "IDEA + Description", "Impact", "Effort", "Started"];
+      const headers = ["Priority", "IDEA + Description", "Impact", "Effort", "Started", "Archived"];
       const lines = [headers.map(csvEscape).join(",")];
-      currentRows().forEach((row) => {
-        lines.push([row.priority, row.idea, row.impact, row.effort, row.started].map(csvEscape).join(","));
+      rowsForSave().forEach((row) => {
+        lines.push([row.priority || "", row.idea, row.impact, row.effort, row.started, row.archived ? "Yes" : "No"].map(csvEscape).join(","));
       });
       return lines.join("\n");
-    }
-
-    async function copyCsv() {
-      const csv = makeCsv();
-      try {
-        await navigator.clipboard.writeText(csv);
-        showToast("CSV copied");
-      } catch {
-        showToast("CSV copy was blocked by the browser");
-      }
     }
 
     function downloadCsv() {
@@ -795,36 +1152,10 @@
       showToast("CSV exported");
     }
 
-    function resetOrder() {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(EDITS_KEY);
-      edits = {};
-      renderRows();
-      queueRemoteSave();
-      showToast("Priority order and selections reset");
-    }
-
-    function isAllowedValue(field, value) {
-      return fieldOptions[field].includes(value) ? value : "";
-    }
-
     function applyRemoteState(state) {
       if (!Array.isArray(state.rows)) return;
-      const validIds = new Set(ideas.map((idea) => idea.id));
-      const remoteIds = state.rows.map((row) => row.id).filter((id) => validIds.has(id));
-      const missingIds = ideas.map((idea) => idea.id).filter((id) => !remoteIds.includes(id));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...remoteIds, ...missingIds]));
-
-      edits = {};
-      state.rows.forEach((row) => {
-        if (!validIds.has(row.id)) return;
-        edits[row.id] = {
-          impact: isAllowedValue("impact", row.impact || ""),
-          effort: isAllowedValue("effort", row.effort || ""),
-          started: isAllowedValue("started", row.started || "")
-        };
-      });
-      saveEdits();
+      rows = normalizeRows(state.rows);
+      saveCachedRows();
       renderRows();
     }
 
@@ -850,6 +1181,15 @@
       return `${baseUrl}/rest/v1/${SHARED_TABLE}${params}`;
     }
 
+    async function responseJson(response) {
+      const text = await response.text();
+      try {
+        return text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error("Expected Supabase JSON but received something else. Check config.js Project URL.");
+      }
+    }
+
     async function loadRemoteState({ silent = false } = {}) {
       if (!hasSupabaseConfig()) {
         syncLabel = "Configure Supabase for shared editing; using this browser";
@@ -870,7 +1210,7 @@
             headers: supabaseHeaders()
           }
         );
-        const records = await response.json();
+        const records = await responseJson(response);
         if (!response.ok) throw new Error(records.message || "Shared database unavailable");
         if (!records.length) throw new Error("Shared database row is missing");
 
@@ -880,7 +1220,7 @@
         };
 
         const hasNewRemoteState = state.updatedAt && state.updatedAt !== lastRemoteUpdatedAt;
-        if (hasNewRemoteState && !isSavingRemote) {
+        if (hasNewRemoteState && !isSavingRemote && !isUserEditing()) {
           applyRemoteState(state);
           if (silent && lastRemoteUpdatedAt) showToast("Shared updates loaded");
         }
@@ -895,9 +1235,13 @@
       }
     }
 
-    function queueRemoteSave() {
+    function isUserEditing() {
+      return Boolean(document.activeElement?.matches(".idea-input, .value-select, .dialog-textarea, .dialog-select"));
+    }
+
+    function queueRemoteSave(delay = 350) {
       clearTimeout(remoteSaveTimer);
-      remoteSaveTimer = setTimeout(saveRemoteState, 350);
+      remoteSaveTimer = setTimeout(saveRemoteState, delay);
     }
 
     async function saveRemoteState() {
@@ -915,7 +1259,7 @@
         const state = {
           version: 1,
           updatedAt: new Date().toISOString(),
-          rows: currentRows()
+          rows: rowsForSave()
         };
         const response = await fetch(
           supabaseRestUrl(`?on_conflict=${encodeURIComponent("id")}`),
@@ -928,7 +1272,7 @@
           body: JSON.stringify([{ id: SHARED_RECORD_ID, data: state }])
           }
         );
-        const records = await response.json();
+        const records = await responseJson(response);
         if (!response.ok) throw new Error(records.message || "Shared save failed");
 
         lastRemoteUpdatedAt = records[0]?.updated_at || state.updatedAt;
@@ -943,6 +1287,72 @@
       }
     }
 
+    function populateSelect(select, options) {
+      select.replaceChildren();
+      options.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value || "None";
+        select.append(option);
+      });
+    }
+
+    function openAddIdeaDialog() {
+      addIdeaForm.reset();
+      populateSelect(document.querySelector("#newIdeaImpact"), fieldOptions.impact);
+      populateSelect(document.querySelector("#newIdeaEffort"), fieldOptions.effort);
+      populateSelect(document.querySelector("#newIdeaStarted"), fieldOptions.started);
+      addIdeaDialog.showModal();
+      requestAnimationFrame(() => newIdeaText.focus());
+    }
+
+    function closeAddIdeaDialog() {
+      addIdeaDialog.close();
+    }
+
+    function addIdeaFromForm(event) {
+      event.preventDefault();
+      const idea = newIdeaText.value.trim();
+      if (!idea) {
+        newIdeaText.focus();
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const newRow = {
+        id: createId(Date.now()),
+        idea,
+        impact: document.querySelector("#newIdeaImpact").value,
+        effort: document.querySelector("#newIdeaEffort").value,
+        started: document.querySelector("#newIdeaStarted").value,
+        archived: false,
+        createdAt: now,
+        updatedAt: now
+      };
+      const firstArchivedIndex = rows.findIndex((row) => row.archived);
+      if (firstArchivedIndex === -1) {
+        rows.push(newRow);
+      } else {
+        rows.splice(firstArchivedIndex, 0, newRow);
+      }
+      saveCachedRows();
+      renderRows();
+      queueRemoteSave();
+      closeAddIdeaDialog();
+      showToast("Idea added");
+    }
+
+    function updateArchiveToggle() {
+      toggleArchivedButton.setAttribute("aria-pressed", String(showArchived));
+      archiveToggleLabel.textContent = showArchived ? "Hide Archived" : "Show Archived";
+    }
+
+    function toggleArchivedRows() {
+      showArchived = !showArchived;
+      localStorage.setItem(SHOW_ARCHIVED_KEY, String(showArchived));
+      renderRows();
+    }
+
     function showToast(message) {
       toast.textContent = message;
       toast.classList.add("show");
@@ -952,9 +1362,15 @@
       }, 2200);
     }
 
-    document.querySelector("#copyCsv").addEventListener("click", copyCsv);
+    populateSelect(document.querySelector("#newIdeaImpact"), fieldOptions.impact);
+    populateSelect(document.querySelector("#newIdeaEffort"), fieldOptions.effort);
+    populateSelect(document.querySelector("#newIdeaStarted"), fieldOptions.started);
+    document.querySelector("#addIdea").addEventListener("click", openAddIdeaDialog);
+    document.querySelector("#closeAddIdea").addEventListener("click", closeAddIdeaDialog);
+    document.querySelector("#cancelAddIdea").addEventListener("click", closeAddIdeaDialog);
+    addIdeaForm.addEventListener("submit", addIdeaFromForm);
+    toggleArchivedButton.addEventListener("click", toggleArchivedRows);
     document.querySelector("#downloadCsv").addEventListener("click", downloadCsv);
-    document.querySelector("#resetOrder").addEventListener("click", resetOrder);
 
     renderRows();
     loadRemoteState();
