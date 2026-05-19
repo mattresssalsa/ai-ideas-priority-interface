@@ -462,8 +462,11 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="config.js"></script>
   <script>
-    const STATE_API = "/api/state";
+    const SUPABASE_CONFIG = window.AI_IDEAS_SUPABASE || {};
+    const SHARED_TABLE = "ai_ideas_state";
+    const SHARED_RECORD_ID = "shared";
     const STORAGE_KEY = "aiIdeasPriorityOrder:v1";
     const EDITS_KEY = "aiIdeasCellEdits:v1";
     const SYNC_INTERVAL_MS = 15000;
@@ -504,7 +507,7 @@
     let activePointerId = null;
     let toastTimer = null;
     let remoteSaveTimer = null;
-    let syncLabel = "Loading shared database...";
+    let syncLabel = "Checking shared database...";
     let lastRemoteUpdatedAt = null;
     let isSavingRemote = false;
     let edits = loadEdits();
@@ -825,16 +828,56 @@
       renderRows();
     }
 
+    function hasSupabaseConfig() {
+      return Boolean(
+        SUPABASE_CONFIG.url &&
+        SUPABASE_CONFIG.anonKey &&
+        !SUPABASE_CONFIG.url.includes("YOUR_") &&
+        !SUPABASE_CONFIG.anonKey.includes("YOUR_")
+      );
+    }
+
+    function supabaseHeaders(extra = {}) {
+      return {
+        apikey: SUPABASE_CONFIG.anonKey,
+        Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+        ...extra
+      };
+    }
+
+    function supabaseRestUrl(params = "") {
+      const baseUrl = SUPABASE_CONFIG.url.replace(/\/$/, "");
+      return `${baseUrl}/rest/v1/${SHARED_TABLE}${params}`;
+    }
+
     async function loadRemoteState({ silent = false } = {}) {
+      if (!hasSupabaseConfig()) {
+        syncLabel = "Configure Supabase for shared editing; using this browser";
+        updateStatus();
+        return;
+      }
+
       if (!silent) {
         syncLabel = "Loading shared database...";
         updateStatus();
       }
 
       try {
-        const response = await fetch(STATE_API, { cache: "no-store" });
-        const state = await response.json();
-        if (!response.ok) throw new Error(state.error || "Shared database unavailable");
+        const response = await fetch(
+          supabaseRestUrl(`?id=eq.${encodeURIComponent(SHARED_RECORD_ID)}&select=data,updated_at`),
+          {
+            cache: "no-store",
+            headers: supabaseHeaders()
+          }
+        );
+        const records = await response.json();
+        if (!response.ok) throw new Error(records.message || "Shared database unavailable");
+        if (!records.length) throw new Error("Shared database row is missing");
+
+        const state = {
+          ...(records[0].data || {}),
+          updatedAt: records[0].updated_at || records[0].data?.updatedAt
+        };
 
         const hasNewRemoteState = state.updatedAt && state.updatedAt !== lastRemoteUpdatedAt;
         if (hasNewRemoteState && !isSavingRemote) {
@@ -843,7 +886,7 @@
         }
 
         lastRemoteUpdatedAt = state.updatedAt || lastRemoteUpdatedAt;
-        syncLabel = state.storage === "local-dev" ? "Local dev database" : "Shared database connected";
+        syncLabel = "Shared Supabase database connected";
         updateStatus();
       } catch (error) {
         syncLabel = "Shared database offline; using this browser";
@@ -858,21 +901,38 @@
     }
 
     async function saveRemoteState() {
+      if (!hasSupabaseConfig()) {
+        syncLabel = "Configure Supabase for shared editing; saved in this browser";
+        updateStatus();
+        return;
+      }
+
       isSavingRemote = true;
       syncLabel = "Saving shared database...";
       updateStatus();
 
       try {
-        const response = await fetch(STATE_API, {
+        const state = {
+          version: 1,
+          updatedAt: new Date().toISOString(),
+          rows: currentRows()
+        };
+        const response = await fetch(
+          supabaseRestUrl(`?on_conflict=${encodeURIComponent("id")}`),
+          {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rows: currentRows() })
-        });
-        const state = await response.json();
-        if (!response.ok) throw new Error(state.error || "Shared save failed");
+          headers: supabaseHeaders({
+            "Content-Type": "application/json",
+            Prefer: "resolution=merge-duplicates,return=representation"
+          }),
+          body: JSON.stringify([{ id: SHARED_RECORD_ID, data: state }])
+          }
+        );
+        const records = await response.json();
+        if (!response.ok) throw new Error(records.message || "Shared save failed");
 
-        lastRemoteUpdatedAt = state.updatedAt || lastRemoteUpdatedAt;
-        syncLabel = state.storage === "local-dev" ? "Saved to local dev database" : "Saved to shared database";
+        lastRemoteUpdatedAt = records[0]?.updated_at || state.updatedAt;
+        syncLabel = "Saved to shared Supabase database";
         updateStatus();
       } catch (error) {
         syncLabel = "Shared save failed; local browser copy kept";
